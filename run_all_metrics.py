@@ -6,7 +6,7 @@ from scipy.stats import kruskal
 import scikit_posthocs as sp
 
 # Root directory containing all alignment data
-ensemble_root = r"D:\DIPLOM\ensemble"
+ensemble_root = r"D:\DIPLOM\OrtDB"
 # Directory where this wrapper script resides (and where we will save results and images)
 script_dir = os.path.dirname(os.path.abspath(__file__))
 results_dir = os.path.join(script_dir, 'results')
@@ -23,6 +23,9 @@ skip_dirs = {"sequences", "sum_sequences"}
 
 print(f"Output CSV and heatmaps will be saved in: {script_dir}")
 print(f"Heatmaps directory: {imgs_dir}\n")
+
+#  НОВОЕ ДЛЯ OrtDB
+output_files = []
 
 # Walk through ensemble_root
 for root, dirs, files in os.walk(ensemble_root):
@@ -55,6 +58,9 @@ for root, dirs, files in os.walk(ensemble_root):
     out_name = f"{dir_name}.csv"
     out_path = os.path.join(results_dir, out_name)
 
+    # НОВОЕ ДЛЯ OrtDB
+    output_files.append((dir_name, out_path))
+
     # Prepare command
     cmd = [sys.executable, metrics_script,
            '-d', root,
@@ -68,18 +74,32 @@ print("\nAll metrics computed and saved.")
 
 # Собираем все результаты в одну длинную таблицу
 long = []
-for root, dirs, files in os.walk(results_dir):
-    # Тут results_dir — папка, куда вы сохраняли CSV
-    for fname in files:
-        if not fname.endswith('.csv'):
-            continue
-        sample = os.path.splitext(fname)[0]
-        df = pd.read_csv(os.path.join(results_dir, fname), sep=';', index_col=0).T
-        # df: строки = алгоритмы, столбцы = ['SP','TC','CS','Entropy']
-        for algo in df.index:
-            row = df.loc[algo].to_dict()
-            row.update({'Sample': sample, 'Algorithm': algo})
-            long.append(row)
+
+# ВЕРНУТЬ ДЛЯ ENSEMBL
+
+# for root, dirs, files in os.walk(results_dir):
+#     # Тут results_dir — папка, куда вы сохраняли CSV
+#     for fname in files:
+#         if not fname.endswith('.csv'):
+#             continue
+#         sample = os.path.splitext(fname)[0]
+#         df = pd.read_csv(os.path.join(results_dir, fname), sep=';', index_col=0).T
+#         # df: строки = алгоритмы, столбцы = ['SP','TC','CS','Entropy']
+#         for algo in df.index:
+#             row = df.loc[algo].to_dict()
+#             row.update({'Sample': sample, 'Algorithm': algo})
+#             long.append(row)
+
+
+for sample, csv_path in output_files:
+    # csv_path уже указывает на существующий файл
+    df = pd.read_csv(csv_path, sep=';', index_col=0).T
+    # df: строки = алгоритмы, столбцы = ['SP','TC','CS','Entropy']
+    for algo in df.index:
+        row = df.loc[algo].to_dict()
+        row.update({'Sample': sample, 'Algorithm': algo})
+        long.append(row)
+
 
 long_df = pd.DataFrame(long)
 # Папка для статистики
